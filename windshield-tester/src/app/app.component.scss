@@ -396,7 +396,7 @@
     transition: box-shadow 0.4s ease;
 
     &.active {
-        animation: progressGlow 2s ease-in-out infinite;
+        animation: progressGlowGreen 1.5s ease-in-out infinite;
     }
 
     &.ok {
@@ -408,7 +408,7 @@
     }
 
     ::ng-deep .custom-progress-bar {
-        height: 20px;
+        height: 24px;
         border-radius: 12px;
 
         .mdc-linear-progress__buffer-bar {
@@ -420,9 +420,9 @@
         }
 
         .mdc-linear-progress__primary-bar .mdc-linear-progress__bar-inner {
-            background: var(--gradient-progress-glow) !important;
-            background-size: 200% 100% !important;
-            animation: shimmer 2s linear infinite !important;
+            background: linear-gradient(90deg, #22c55e, #4ade80, #86efac, #4ade80, #22c55e) !important;
+            background-size: 300% 100% !important;
+            animation: greenShimmer 1.5s linear infinite !important;
         }
     }
 

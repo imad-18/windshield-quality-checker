@@ -188,6 +188,30 @@ body {
   }
 }
 
+@keyframes greenShimmer {
+  0% {
+    background-position: -300% 0;
+  }
+
+  100% {
+    background-position: 300% 0;
+  }
+}
+
+@keyframes progressGlowGreen {
+  0% {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 28px rgba(34, 197, 94, 0.55), 0 0 50px rgba(74, 222, 128, 0.2);
+  }
+
+  100% {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+  }
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
