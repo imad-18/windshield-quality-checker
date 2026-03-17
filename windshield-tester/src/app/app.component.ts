@@ -63,8 +63,7 @@ export class AppComponent implements OnDestroy {
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
   ];
 
-  private timer: any;
-  private phaseTimer: any;
+  private ws: WebSocket | null = null;
 
   get currentFlag(): string {
     return this.languages.find(l => l.code === this.translate.currentLang())?.flag ?? '🇪🇸';
@@ -73,7 +72,6 @@ export class AppComponent implements OnDestroy {
   startTest() {
     if (this.isTesting) return;
 
-    this.windshieldId++;
     this.isTesting = true;
     this.progress = 0;
     this.testResult = 'PENDING';
@@ -82,88 +80,104 @@ export class AppComponent implements OnDestroy {
     this.printSticker = null;
     this.intensityReadings = [];
     this.readingsReceived = 0;
+    this.windshieldId = 0; // Hide the ID until backend returns the new actual test_id
+    this.testPhase = 'standby';
 
-    // Phase 1: Detecting (simulate 1.5s)
-    this.testPhase = 'detecting';
-
-    this.phaseTimer = setTimeout(() => {
-      // Phase 2: Measuring
-      this.testPhase = 'measuring';
-      this.startMeasurement();
-    }, 1500);
+    this.connectWebSocket();
   }
 
-  private startMeasurement() {
-    const readingIntervalMs = 200; // read every 200ms
-    this.expectedReadings = Math.floor((this.cycleTime * 1000) / readingIntervalMs);
-    this.readingsReceived = 0;
-
-    this.timer = setInterval(() => {
-      // Simulate real-time intensity reading from equipment
-      const baseIntensity = (this.minIntensity + this.maxIntensity) / 2;
-      const jitter = (Math.random() - 0.5) * 0.8; // wider jitter for realism
-      const reading = parseFloat((baseIntensity + jitter).toFixed(3));
-
-      this.readingsReceived++;
-      this.intensityReadings.push(reading);
-      this.currentIntensity = reading;
-
-      // Compute resistance R = V / I (Ohm's law)
-      if (reading > 0) {
-        this.currentResistance = parseFloat((this.tension / reading).toFixed(2));
-      }
-
-      // Progress is based on readings received vs expected
-      this.progress = Math.min((this.readingsReceived / this.expectedReadings) * 100, 100);
-
-      if (this.readingsReceived >= this.expectedReadings) {
-        this.evaluateResult();
-      }
-    }, readingIntervalMs);
-  }
-
-  private evaluateResult() {
-    clearInterval(this.timer);
-    this.testPhase = 'evaluating';
-
-    // Compute final intensity as average of last 10 readings for stability
-    const lastReadings = this.intensityReadings.slice(-10);
-    const avgIntensity = lastReadings.reduce((a, b) => a + b, 0) / lastReadings.length;
-
-    // Add slight bias for demo — 70% chance to be in range
-    const finalMock = Math.random() > 0.3
-      ? parseFloat((Math.random() * (this.maxIntensity - this.minIntensity) + this.minIntensity).toFixed(3))
-      : parseFloat(avgIntensity.toFixed(3));
-
-    this.currentIntensity = finalMock;
-    if (finalMock > 0) {
-      this.currentResistance = parseFloat((this.tension / finalMock).toFixed(2));
+  private connectWebSocket() {
+    if (this.ws) {
+      this.ws.close();
     }
-    this.progress = 100;
 
-    // Short delay for evaluating phase visibility
-    setTimeout(() => {
-      if (this.currentIntensity! >= this.minIntensity && this.currentIntensity! <= this.maxIntensity) {
-        this.testResult = 'OK';
-        this.generateSticker();
-      } else {
+    // Connect to the FastAPI WebSocket endpoint
+    this.ws = new WebSocket('ws://localhost:8000/ws/test');
+
+    this.ws.onopen = () => {
+      console.log('WebSocket connected');
+      // Send the start command with all dynamic parameters from the UI
+      this.ws?.send(JSON.stringify({
+        action: 'start',
+        model: this.selectedModel,
+        tension: this.tension,
+        min_intensity: this.minIntensity,
+        max_intensity: this.maxIntensity,
+        cycle_time: this.cycleTime
+      }));
+    };
+
+    this.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.error) {
+        console.error('Server error:', data.error);
         this.testResult = 'ERROR';
+        this.testPhase = 'complete';
+        this.isTesting = false;
+        this.ws?.close();
+        return;
       }
+
+      // Update Phase
+      if (data.phase) {
+        this.testPhase = data.phase as TestPhase;
+      }
+
+      // Real-time Measurements Stream
+      if (data.reading) {
+        this.currentIntensity = data.reading.intensity;
+        this.currentResistance = data.reading.resistance;
+        this.progress = data.reading.progress;
+        this.readingsReceived = data.reading.index;
+        this.expectedReadings = data.reading.total;
+        this.intensityReadings.push(data.reading.intensity);
+      }
+
+      // Evaluation Result
+      if (data.result) {
+        this.windshieldId = data.result.test_id; // Sync with actual DataBase ID
+        this.currentIntensity = data.result.final_intensity;
+        this.currentResistance = data.result.final_resistance;
+        this.testResult = data.result.status as 'OK' | 'ERROR';
+
+        if (this.testResult === 'OK') {
+          this.generateSticker(data.result);
+        }
+
+        this.isTesting = false;
+        this.ws?.close();
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      this.testResult = 'ERROR';
       this.testPhase = 'complete';
       this.isTesting = false;
-    }, 800);
+    };
+
+    this.ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      if (this.isTesting) {
+        // If connection drops unexpectedly while testing
+        this.testResult = 'ERROR';
+        this.testPhase = 'complete';
+        this.isTesting = false;
+      }
+    };
   }
 
-  private generateSticker() {
-    const now = new Date();
+  private generateSticker(resultData: any) {
+    const dateObj = resultData.created_at ? new Date(resultData.created_at) : new Date();
     this.printSticker = {
-      id: this.windshieldId,
+      id: resultData.test_id,
       model: this.selectedModel,
-      intensity: this.currentIntensity,
-      resistance: this.currentResistance,
+      intensity: resultData.final_intensity,
+      resistance: resultData.final_resistance,
       tension: this.tension,
-      date: now.toLocaleDateString(),
-      time: now.toLocaleTimeString(),
+      date: dateObj.toLocaleDateString(),
+      time: dateObj.toLocaleTimeString(),
       status: 'APPROVED'
     };
   }
@@ -184,7 +198,8 @@ export class AppComponent implements OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.timer) clearInterval(this.timer);
-    if (this.phaseTimer) clearTimeout(this.phaseTimer);
+    if (this.ws) {
+      this.ws.close();
+    }
   }
 }
