@@ -1,11 +1,11 @@
 """
-Zebra printer service — generates ZPL II labels and sends them via TCP.
+Zebra printer service — generates ZPL II labels and sends them via USB/Serial.
 
 Label content (per user spec): DATE and TIME only.
 """
 
 import logging
-import socket
+import serial
 from datetime import datetime
 
 from config import settings
@@ -14,16 +14,16 @@ logger = logging.getLogger(__name__)
 
 
 class ZebraPrinter:
-    """Sends ZPL II commands to a Zebra printer over raw TCP (port 9100)."""
+    """Sends ZPL II commands to a Zebra printer over USB/Serial."""
 
     def __init__(
         self,
-        host: str = settings.printer_host,
-        port: int = settings.printer_port,
+        port: str = settings.printer_port,   # COMx on Windows, /dev/ttyUSBx on Linux
+        baudrate: int = getattr(settings, "printer_baudrate", 9600),
         enabled: bool = settings.printer_enabled,
     ):
-        self.host = host
         self.port = port
+        self.baudrate = baudrate
         self.enabled = enabled
 
     def generate_zpl(self, test_date: str, test_time: str) -> str:
@@ -32,21 +32,21 @@ class ZebraPrinter:
         Prints only the date and time of the test.
         """
         zpl = (
-            "^XA\n"                        # Start format
-            "^CF0,40\n"                    # Default font, 40pt
-            "^FO50,50^FD"                  # Field origin
-            f"DATE: {test_date}"           # Date
-            "^FS\n"                        # Field separator
-            "^FO50,120^FD"                 # Field origin
-            f"TIME: {test_time}"           # Time
-            "^FS\n"                        # Field separator
-            "^XZ\n"                        # End format
+            "^XA\n"
+            "^CF0,40\n"
+            "^FO50,50^FD"
+            f"DATE: {test_date}"
+            "^FS\n"
+            "^FO50,120^FD"
+            f"TIME: {test_time}"
+            "^FS\n"
+            "^XZ\n"
         )
         return zpl
 
     def print_label(self, test_date: str | None = None, test_time: str | None = None) -> bool:
         """
-        Generate and send ZPL label to printer.
+        Generate and send ZPL label to printer via USB/Serial.
         If no date/time provided, uses current datetime.
         Returns True on success.
         """
@@ -61,17 +61,12 @@ class ZebraPrinter:
             return True
 
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.settimeout(5)
-                sock.connect((self.host, self.port))
-                sock.sendall(zpl.encode("utf-8"))
-                logger.info(f"Label printed to {self.host}:{self.port}")
+            with serial.Serial(self.port, self.baudrate, timeout=2) as ser:
+                ser.write(zpl.encode("utf-8"))
+                logger.info(f"Label printed to USB port {self.port}")
                 return True
-        except socket.timeout:
-            logger.error(f"Printer timeout: {self.host}:{self.port}")
-            return False
-        except ConnectionRefusedError:
-            logger.error(f"Printer connection refused: {self.host}:{self.port}")
+        except serial.SerialException as e:
+            logger.error(f"Printer serial error: {e}")
             return False
         except Exception as e:
             logger.error(f"Printer error: {e}")

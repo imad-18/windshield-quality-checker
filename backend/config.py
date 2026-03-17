@@ -20,8 +20,10 @@ class Settings(BaseSettings):
     modbus_intensity_register: int = 1    # Input register address for intensity
 
     # ── Zebra Printer ──
-    printer_enabled: bool = False
-    printer_host: str = "192.168.1.200"
+    # printer_enabled: bool = False
+    # printer_host: str = "192.168.1.200"
+    printer_enabled: bool = True
+    printer_port: str = "COM4"
     printer_port: int = 9100
 
     # ── Measurement ──
