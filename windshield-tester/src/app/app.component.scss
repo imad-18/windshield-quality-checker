@@ -410,19 +410,36 @@
     ::ng-deep .custom-progress-bar {
         height: 24px;
         border-radius: 12px;
+        padding: 1px;
 
         .mdc-linear-progress__buffer-bar {
             background-color: var(--bg-config) !important;
+            height: 100% !important;
         }
 
         .mdc-linear-progress__bar-inner {
             border-color: transparent !important;
         }
 
-        .mdc-linear-progress__primary-bar .mdc-linear-progress__bar-inner {
-            background: linear-gradient(90deg, #22c55e, #4ade80, #86efac, #4ade80, #22c55e) !important;
-            background-size: 300% 100% !important;
-            animation: greenShimmer 1.5s linear infinite !important;
+        /* Effet striped animé */
+        .mdc-linear-progress__primary-bar {
+            height: 100% !important;
+
+            .mdc-linear-progress__bar-inner {
+                height: 100% !important;
+                background: linear-gradient(45deg,
+                        rgba(255, 255, 255, 0.2) 25%,
+                        transparent 25%,
+                        transparent 50%,
+                        rgba(255, 255, 255, 0.2) 50%,
+                        rgba(255, 255, 255, 0.2) 75%,
+                        transparent 75%,
+                        transparent) !important;
+                background-size: 40px 40px !important;
+                background-color: #22c55e !important;
+                /* vert de base */
+                animation: progressStripes 1s linear infinite !important;
+            }
         }
     }
 
@@ -436,6 +453,18 @@
         animation: none !important;
     }
 }
+
+/* Animation des stripes */
+@keyframes progressStripes {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 40px 0;
+    }
+}
+
 
 /* ===== Metrics Grid ===== */
 .metrics-grid {
