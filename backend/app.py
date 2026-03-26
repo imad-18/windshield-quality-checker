@@ -47,7 +47,7 @@ def on_startup():
     logger.info("Initialising database …")
     init_db()
     logger.info("Database ready")
-    logger.info(f"Modbus: {'ENABLED' if settings.modbus_enabled else 'SIMULATION'}")
+    logger.info(f"Power Supply: {'ENABLED' if settings.power_supply_enabled else 'SIMULATION'}")
     logger.info(f"Printer: {'ENABLED' if settings.printer_enabled else 'SIMULATION'}")
 
 

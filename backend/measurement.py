@@ -2,13 +2,14 @@
 Measurement service — reads intensity from power supply.
 
 Supports two modes:
-  • Modbus RTU/TCP  → real equipment via pymodbus
-  • Simulation      → mock readings for development
+  • USB/Serial  → real equipment via pyserial
+  • Simulation  → mock readings for development
 """
 
-import asyncio
 import logging
 import random
+import serial
+import time
 
 from config import settings
 
@@ -16,66 +17,54 @@ logger = logging.getLogger(__name__)
 
 
 class MeasurementService:
-    """Manages the connection to the power supply and reads intensity."""
+    """Manages the connection to the power supply and reads intensity via USB/Serial."""
 
     def __init__(self):
-        self._client = None
+        self._serial = None
         self._connected = False
 
-        if settings.modbus_enabled:
-            self._init_modbus()
+        if settings.power_supply_enabled:
+            self._init_usb()
         else:
-            logger.info("Modbus disabled — running in SIMULATION mode")
+            logger.info("Power supply disabled — running in SIMULATION mode")
 
-    # ── Modbus setup ──────────────────────────────────────────────
+    # ── USB/Serial setup ──────────────────────────────────────────
 
-    def _init_modbus(self):
-        """Initialise the Modbus client (RTU or TCP)."""
+    def _init_usb(self):
+        """Initialize the USB/Serial connection to the power supply."""
         try:
-            if settings.modbus_method == "rtu":
-                from pymodbus.client import ModbusSerialClient
-                self._client = ModbusSerialClient(
-                    port=settings.modbus_port,
-                    baudrate=settings.modbus_baudrate,
-                    timeout=3,
-                )
-            else:
-                from pymodbus.client import ModbusTcpClient
-                self._client = ModbusTcpClient(
-                    host=settings.modbus_host,
-                    port=settings.modbus_tcp_port,
-                    timeout=3,
-                )
-
-            self._connected = self._client.connect()
-            if self._connected:
-                logger.info(f"Modbus connected via {settings.modbus_method}")
-            else:
-                logger.warning("Modbus connection failed — falling back to simulation")
+            self._serial = serial.Serial(
+                port=settings.power_supply_port,
+                baudrate=settings.power_supply_baudrate,
+                timeout=settings.power_supply_timeout,
+            )
+            self._connected = True
+            logger.info(
+                f"Power supply connected via USB on {settings.power_supply_port}"
+            )
+        except serial.SerialException as e:
+            logger.error(f"USB connection error: {e} — falling back to simulation")
+            self._connected = False
         except Exception as e:
-            logger.error(f"Modbus init error: {e} — falling back to simulation")
+            logger.error(f"USB init error: {e} — falling back to simulation")
             self._connected = False
 
     # ── Tension ───────────────────────────────────────────────────
 
     def apply_tension(self, voltage: float) -> bool:
-        """Write voltage to the power supply holding register."""
-        if self._connected and self._client:
+        """Send voltage command to the power supply via USB/Serial."""
+        if self._connected and self._serial:
             try:
-                # Write voltage * 10 as integer (common Modbus convention)
-                value = int(voltage * 10)
-                result = self._client.write_register(
-                    settings.modbus_tension_register,
-                    value,
-                    slave=settings.modbus_slave_id,
-                )
-                if result.isError():
-                    logger.error(f"Modbus write error: {result}")
-                    return False
-                logger.info(f"Tension set to {voltage}V via Modbus")
+                # Format the command with the voltage value
+                cmd = settings.power_supply_tension_cmd.format(value=voltage)
+                self._serial.write(cmd.encode("utf-8"))
+                logger.info(f"Tension set to {voltage}V via USB")
                 return True
+            except serial.SerialException as e:
+                logger.error(f"USB write error: {e}")
+                return False
             except Exception as e:
-                logger.error(f"Modbus write exception: {e}")
+                logger.error(f"USB write exception: {e}")
                 return False
         else:
             logger.info(f"[SIM] Tension set to {voltage}V")
@@ -84,23 +73,31 @@ class MeasurementService:
     # ── Intensity reading ─────────────────────────────────────────
 
     def read_intensity(self) -> float:
-        """Read current intensity from the power supply."""
-        if self._connected and self._client:
+        """Read current intensity from the power supply via USB/Serial."""
+        if self._connected and self._serial:
             try:
-                result = self._client.read_input_registers(
-                    settings.modbus_intensity_register,
-                    count=1,
-                    slave=settings.modbus_slave_id,
-                )
-                if result.isError():
-                    logger.error(f"Modbus read error: {result}")
+                # Send the intensity read command
+                self._serial.write(settings.power_supply_intensity_cmd.encode("utf-8"))
+
+                # Wait for and read the response
+                time.sleep(settings.power_supply_response_timeout)
+                response = self._serial.readline().decode("utf-8").strip()
+
+                if response:
+                    # Try to parse the response as a float
+                    intensity = float(response)
+                    return round(intensity, 3)
+                else:
+                    logger.warning("No response from power supply")
                     return 0.0
-                # Convert register value back (value / 100 for 2 decimal precision)
-                raw = result.registers[0]
-                intensity = raw / 100.0
-                return round(intensity, 3)
+            except ValueError:
+                logger.error(f"Could not parse intensity response: {response}")
+                return 0.0
+            except serial.SerialException as e:
+                logger.error(f"USB read error: {e}")
+                return 0.0
             except Exception as e:
-                logger.error(f"Modbus read exception: {e}")
+                logger.error(f"USB read exception: {e}")
                 return 0.0
         else:
             return self._simulate_reading()
@@ -116,10 +113,10 @@ class MeasurementService:
     # ── Cleanup ───────────────────────────────────────────────────
 
     def close(self):
-        """Disconnect from Modbus."""
-        if self._client and self._connected:
-            self._client.close()
-            logger.info("Modbus connection closed")
+        """Disconnect from the power supply USB/Serial."""
+        if self._serial and self._connected:
+            self._serial.close()
+            logger.info("Power supply USB connection closed")
 
 
 # Singleton instance
