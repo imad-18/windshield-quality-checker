@@ -47,7 +47,9 @@ def on_startup():
     logger.info("Initialising database …")
     init_db()
     logger.info("Database ready")
-    logger.info(f"Power Supply: {'ENABLED' if settings.power_supply_enabled else 'SIMULATION'}")
+    logger.info(
+        f"Power Supply: {'ENABLED' if settings.power_supply_enabled else 'SIMULATION'}"
+    )
     logger.info(f"Printer: {'ENABLED' if settings.printer_enabled else 'SIMULATION'}")
 
 
@@ -190,16 +192,18 @@ async def ws_test(websocket: WebSocket):
             resistance = round(tension / intensity, 2) if intensity > 0 else 0.0
             readings.append(intensity)
 
-            await websocket.send_json({
-                "phase": "measuring",
-                "reading": {
-                    "index": i + 1,
-                    "total": expected_readings,
-                    "intensity": intensity,
-                    "resistance": resistance,
-                    "progress": round(((i + 1) / expected_readings) * 100, 1),
-                },
-            })
+            await websocket.send_json(
+                {
+                    "phase": "measuring",
+                    "reading": {
+                        "index": i + 1,
+                        "total": expected_readings,
+                        "intensity": intensity,
+                        "resistance": resistance,
+                        "progress": round(((i + 1) / expected_readings) * 100, 1),
+                    },
+                }
+            )
 
             await asyncio.sleep(interval_s)
 
@@ -235,20 +239,22 @@ async def ws_test(websocket: WebSocket):
             )
 
         # ── Phase: Complete ──
-        await websocket.send_json({
-            "phase": "complete",
-            "result": {
-                "test_id": test_id,
-                "passed": result.passed,
-                "status": "OK" if result.passed else "ERROR",
-                "final_intensity": result.final_intensity,
-                "final_resistance": result.final_resistance,
-                "readings_count": result.readings_count,
-                "is_stable": result.is_stable,
-                "printed": printed,
-                "created_at": created_at.isoformat() if created_at else None,
-            },
-        })
+        await websocket.send_json(
+            {
+                "phase": "complete",
+                "result": {
+                    "test_id": test_id,
+                    "passed": result.passed,
+                    "status": "OK" if result.passed else "ERROR",
+                    "final_intensity": result.final_intensity,
+                    "final_resistance": result.final_resistance,
+                    "readings_count": result.readings_count,
+                    "is_stable": result.is_stable,
+                    "printed": printed,
+                    "created_at": created_at.isoformat() if created_at else None,
+                },
+            }
+        )
 
         logger.info(f"Test #{test_id} complete: {'OK' if result.passed else 'ERROR'}")
 
@@ -265,4 +271,5 @@ async def ws_test(websocket: WebSocket):
 # ── Entry point ───────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
