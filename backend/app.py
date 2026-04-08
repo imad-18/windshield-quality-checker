@@ -19,7 +19,7 @@ from database import init_db, get_db
 from models import WindshieldTest
 from measurement import measurement_service
 from evaluation import evaluation_service
-from printer import zebra_printer
+from printer import print_label
 
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(message)s")
@@ -233,10 +233,15 @@ async def ws_test(websocket: WebSocket):
         printed = False
         if result.passed:
             now = created_at or datetime.now()
-            printed = zebra_printer.print_label(
+            logger.info(f"Attempting to print label for windshield test ID {test_id} at {now.strftime('%d/%m/%Y %H:%M:%S')}")
+            printed = print_label(
                 test_date=now.strftime("%d/%m/%Y"),
                 test_time=now.strftime("%H:%M:%S"),
             )
+            if printed:
+                logger.info(f"[PRINTER] Label printed successfully for test ID {test_id}")
+            else:
+                logger.error(f"[PRINTER] Failed to print label for test ID {test_id}")
 
         # ── Phase: Complete ──
         await websocket.send_json(

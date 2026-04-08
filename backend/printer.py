@@ -1,77 +1,64 @@
-"""
-Zebra printer service — generates ZPL II labels and sends them via USB/Serial.
-
-Label content (per user spec): DATE and TIME only.
-"""
-
-import logging
+import win32print
 import serial
-from datetime import datetime
+from config import Settings
 
-from config import settings
-
-logger = logging.getLogger(__name__)
+settings = Settings()
 
 
-class ZebraPrinter:
-    """Sends ZPL II commands to a Zebra printer over USB/Serial."""
+def send_zpl_usb(zpl: str) -> bool:
+    try:
+        printer_name = settings.printer_name
 
-    def __init__(
-        self,
-        port: str = settings.printer_port,   # COMx on Windows, /dev/ttyUSBx on Linux
-        baudrate: int = getattr(settings, "printer_baudrate", 9600),
-        enabled: bool = settings.printer_enabled,
-    ):
-        self.port = port
-        self.baudrate = baudrate
-        self.enabled = enabled
-
-    def generate_zpl(self, test_date: str, test_time: str) -> str:
-        """
-        Build the ZPL II label string.
-        Prints only the date and time of the test.
-        """
-        zpl = (
-            "^XA\n"
-            "^CF0,40\n"
-            "^FO50,50^FD"
-            f"DATE: {test_date}"
-            "^FS\n"
-            "^FO50,120^FD"
-            f"TIME: {test_time}"
-            "^FS\n"
-            "^XZ\n"
-        )
-        return zpl
-
-    def print_label(self, test_date: str | None = None, test_time: str | None = None) -> bool:
-        """
-        Generate and send ZPL label to printer via USB/Serial.
-        If no date/time provided, uses current datetime.
-        Returns True on success.
-        """
-        now = datetime.now()
-        date_str = test_date or now.strftime("%d/%m/%Y")
-        time_str = test_time or now.strftime("%H:%M:%S")
-
-        zpl = self.generate_zpl(date_str, time_str)
-
-        if not self.enabled:
-            logger.info(f"[PRINTER SIM] Would print label:\n{zpl}")
-            return True
-
+        hPrinter = win32print.OpenPrinter(printer_name)
         try:
-            with serial.Serial(self.port, self.baudrate, timeout=2) as ser:
-                ser.write(zpl.encode("utf-8"))
-                logger.info(f"Label printed to USB port {self.port}")
-                return True
-        except serial.SerialException as e:
-            logger.error(f"Printer serial error: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Printer error: {e}")
-            return False
+            win32print.StartDocPrinter(hPrinter, 1, ("ZPL Label", None, "RAW"))
+            win32print.StartPagePrinter(hPrinter)
+            win32print.WritePrinter(hPrinter, zpl.encode())
+            win32print.EndPagePrinter(hPrinter)
+            win32print.EndDocPrinter(hPrinter)
+        finally:
+            win32print.ClosePrinter(hPrinter)
+
+        return True
+    except Exception as e:
+        print(f"[PRINTER][USB ERROR] {e}")
+        return False
 
 
-# Singleton instance
-zebra_printer = ZebraPrinter()
+def send_zpl_serial(zpl: str) -> bool:
+    try:
+        ser = serial.Serial(
+            port=settings.printer_port,
+            baudrate=settings.printer_baudrate,
+            timeout=settings.printer_timeout,
+        )
+        ser.write(zpl.encode())
+        ser.close()
+        return True
+    except Exception as e:
+        print(f"[PRINTER][SERIAL ERROR] {e}")
+        return False
+
+
+def print_label(test_date: str, test_time: str) -> bool:
+    if not settings.printer_enabled:
+        return False
+
+    # 👉 Clean ZPL (with fixes we discussed)
+    zpl = f"""
+^XA
+^PW800
+^FO250,100^A0N,50,50^FD {test_date}^FS
+^FO250,180^A0N,50,50^FD {test_time}^FS
+^XZ
+"""
+
+    if settings.printer_type == "usb":
+        return send_zpl_usb(zpl)
+
+    elif settings.printer_type == "serial":
+        return send_zpl_serial(zpl)
+
+    else:
+        print("[PRINTER] Unsupported printer type")
+        return False

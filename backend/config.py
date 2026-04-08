@@ -23,7 +23,14 @@ class Settings(BaseSettings):
 
     # ── Zebra Printer ──
     printer_enabled: bool = True
-    printer_port: str = "COM4"  # Serial port (e.g., "COM4")
+
+    # NEW → printer type
+    printer_type: str = "usb"   # "usb" | "serial" | "network"
+
+    # USB
+    printer_name: str = "ZDesigner ZT411-203dpi ZPL"
+
+    printer_port: str = "COM5"  # Serial port (e.g., "COM4")
     printer_baudrate: int = 9600
     printer_timeout: float = 2.0  # seconds
 
