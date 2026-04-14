@@ -10,25 +10,18 @@ class Settings(BaseSettings):
 
     # ── Power Supply (USB/Serial) ──
     power_supply_enabled: bool = True
-    power_supply_port: str = (
-        "COM3"  # Serial port (e.g., "COM3") or /dev/ttyUSBx on Linux
-    )
+    power_supply_type: str = "usb"  # "usb" | "serial"
+    power_supply_port: str = "COM3"  # Serial port (e.g., "COM3") or USB port
     power_supply_baudrate: int = 9600
     power_supply_timeout: float = 2.0  # seconds
-    power_supply_tension_cmd: str = (
-        "VOLT:{value}\n"  # Command template for setting tension
-    )
+    power_supply_tension_cmd: str = "VOLT:{value}\n"  # Command template for setting tension
     power_supply_intensity_cmd: str = "INTENSITY\n"  # Command to read intensity
     power_supply_response_timeout: float = 0.5  # seconds to wait for response
 
     # ── Zebra Printer ──
     printer_enabled: bool = True
-
-    # NEW → printer type
-    printer_type: str = "usb"   # "usb" | "serial" | "network"
-
-    # USB
-    printer_name: str = "ZDesigner ZT411-203dpi ZPL"
+    printer_type: str = "usb"  # "usb" | "serial"
+    printer_name: str = "ZDesigner ZD621-203dpi ZPL"
 
     printer_port: str = "COM5"  # Serial port (e.g., "COM4")
     printer_baudrate: int = 9600

@@ -50,6 +50,7 @@ def print_label(test_date: str, test_time: str) -> bool:
 ^PW800
 ^FO250,100^A0N,50,50^FD {test_date}^FS
 ^FO250,180^A0N,50,50^FD {test_time}^FS
+^FO520,100^BQN,2,6^FDLA,Hello World^FS
 ^XZ
 """
 
