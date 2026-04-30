@@ -14,7 +14,9 @@ class Settings(BaseSettings):
     power_supply_port: str = "COM3"  # Serial port (e.g., "COM3") or USB port
     power_supply_baudrate: int = 9600
     power_supply_timeout: float = 2.0  # seconds
-    power_supply_tension_cmd: str = "VOLT:{value}\n"  # Command template for setting tension
+    power_supply_tension_cmd: str = (
+        "VOLT:{value}\n"  # Command template for setting tension
+    )
     power_supply_intensity_cmd: str = "INTENSITY\n"  # Command to read intensity
     power_supply_response_timeout: float = 0.5  # seconds to wait for response
 
@@ -31,7 +33,7 @@ class Settings(BaseSettings):
     default_tension: float = 20.0
     default_min_intensity: float = 0.87
     default_max_intensity: float = 1.26
-    default_cycle_time: int = 30  # seconds
+    default_cycle_time: int = 15  # seconds
     reading_interval_ms: int = 200  # ms between readings
     stabilization_window: int = 10  # last N readings to check
     stabilization_threshold: float = 0.05  # max std deviation for "stable"
