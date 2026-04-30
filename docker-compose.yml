@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./windshield-tester
+      dockerfile: Dockerfile
+    container_name: windshield-frontend
+    volumes:
+      - ./windshield-tester:/app
+      - /app/node_modules
+    ports:
+      - "4200:4200"
+    environment:
+      - ANGULAR_PORT=4200
+      - BACKEND_API_URL=http://host.docker.internal:8000
+    restart: unless-stopped
