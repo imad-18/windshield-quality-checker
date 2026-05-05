@@ -1,10 +1,32 @@
-version: '3.8'
+name: postglass          # ---Rename the project
 
 services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: backend # <--- ADDED: This forces the image name to be just "backend"
+    container_name: windshield-backend
+    volumes:
+      # BIND MOUNT : lie le dossier backend local au conteneur
+      - ./backend:/app
+      # devices:
+      # ACCÈS HARDWARE : adapte ceci selon que l'ordinateur industriel est sous Linux ou Windows
+      # - "/dev/ttyUSB0:/dev/ttyUSB0" 
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./test.db
+      # Remplacez par vos vraies valeurs de base de données en production
+    networks:
+      - windshield-network
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./windshield-tester
       dockerfile: Dockerfile
+    image: frontend # <--- ADDED: This forces the image name to be just "frontend"
     container_name: windshield-frontend
     volumes:
       - ./windshield-tester:/app
@@ -13,5 +35,13 @@ services:
       - "4200:4200"
     environment:
       - ANGULAR_PORT=4200
-      - BACKEND_API_URL=http://host.docker.internal:8000
+      - BACKEND_API_URL=http://backend:8000
+    networks:
+      - windshield-network
+    depends_on:
+      - backend
     restart: unless-stopped
+
+networks:
+  windshield-network:
+    driver: bridge

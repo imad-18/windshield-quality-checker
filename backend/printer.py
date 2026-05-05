@@ -1,11 +1,22 @@
-import win32print
 import serial
 from config import Settings
+
+# Try to import win32print (Windows only)
+try:
+    import win32print
+
+    WIN32PRINT_AVAILABLE = True
+except ImportError:
+    WIN32PRINT_AVAILABLE = False
 
 settings = Settings()
 
 
 def send_zpl_usb(zpl: str) -> bool:
+    if not WIN32PRINT_AVAILABLE:
+        print("[PRINTER][USB] win32print not available on this platform")
+        return False
+
     try:
         printer_name = settings.printer_name
 
