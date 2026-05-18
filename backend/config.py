@@ -6,7 +6,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # ── Database ──
-    db_url: str = "mysql+pymysql://root:password@localhost:3306/windshield_db"
+    db_url: str = "mysql+pymysql://root:imad0003@mysql:3306/windshield_db"
 
     # ── Power Supply (USB/Serial) ──
     power_supply_enabled: bool = True
