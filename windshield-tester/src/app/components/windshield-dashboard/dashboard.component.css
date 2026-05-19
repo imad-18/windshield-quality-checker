@@ -40,7 +40,7 @@
 
 .dashboard-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: end;
     align-items: center;
     margin-bottom: 30px;
     gap: 20px;
@@ -92,7 +92,7 @@
 
 .btn-primary {
     background-color: var(--primary-color);
-    color: white;
+    color: #000;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -101,7 +101,7 @@
 
 .btn-success {
     background-color: var(--success-color);
-    color: white;
+    color: #000;
 }
 
 .btn-success:hover:not(:disabled) {

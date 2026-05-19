@@ -1,7 +1,7 @@
 <div class="app-container">
 
     <!-- ===== HEADER ===== -->
-    <header class="app-header">
+    <!-- <header class="app-header">
         <div class="header-left">
             <img src="saint-gobain-logo.jpg" alt="Logo" class="brand-logo" />
         </div>
@@ -10,7 +10,7 @@
             <p class="app-subtitle">{{ 'app.subtitle' | translate }}</p>
         </div>
         <div class="header-right">
-            <!-- Language Selector -->
+
             <button mat-icon-button [matMenuTriggerFor]="langMenu" class="toolbar-btn" [matTooltip]="'Language'">
                 <span class="flag-icon">{{ currentFlag }}</span>
             </button>
@@ -20,13 +20,12 @@
                 </button>
             </mat-menu>
 
-            <!-- Theme Toggle -->
             <button mat-icon-button class="toolbar-btn theme-toggle" (click)="theme.toggle()"
                 [matTooltip]="'theme.toggle' | translate">
                 <mat-icon>{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
             </button>
         </div>
-    </header>
+    </header> -->
 
     <!-- ===== MAIN ===== -->
     <main class="main-content">
