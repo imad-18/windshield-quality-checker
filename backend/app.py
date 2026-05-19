@@ -21,6 +21,8 @@ from measurement import measurement_service
 from evaluation import evaluation_service
 from printer import print_label
 
+from dashboard_router import router as dashboard_router  # ADD AT TOP
+
 # ── Logging ───────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -34,12 +36,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"],
+    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(dashboard_router)  # ADD IN SETUP SECTION
 
 # ── Startup / Shutdown ────────────────────────────────────────────
 @app.on_event("startup")
