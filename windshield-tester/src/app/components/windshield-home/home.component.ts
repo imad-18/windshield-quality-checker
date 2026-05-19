@@ -38,7 +38,7 @@ export class WindshieldHomeComponent implements OnDestroy {
   tension = 20.0;
   minIntensity = 0.87;
   maxIntensity = 1.26;
-  cycleTime = 30; // seconds
+  cycleTime = 10; // seconds
 
   // State
   testPhase: TestPhase = 'standby';
