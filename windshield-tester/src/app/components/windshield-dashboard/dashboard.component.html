@@ -1,0 +1,193 @@
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="header-title">
+            <h1>Windshield Test Dashboard</h1>
+            <p class="subtitle">Production Manager View - Real-Time Test Results</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-primary" (click)="refreshData()" [disabled]="isLoading">
+                🔄 Refresh
+            </button>
+            <button class="btn btn-success" (click)="exportAsCSV()" [disabled]="isExporting || tests.length === 0">
+                {{ isExporting ? '⏳ Exporting...' : '⬇️ Export CSV' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="stats-section" *ngIf="stats">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_tests }}</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-value">{{ stats.ok_count }}</div>
+                <div class="stat-label">Passed (OK)</div>
+            </div>
+            <div class="stat-card error">
+                <div class="stat-value">{{ stats.error_count }}</div>
+                <div class="stat-label">Failed (ERROR)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.ok_percentage }}%</div>
+                <div class="stat-label">Pass Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ formatNumber(stats.avg_intensity) }}</div>
+                <div class="stat-label">Avg Intensity</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{
+                    stats.last_test ? (stats.last_test | slice : 0 : 10) : 'N/A'
+                    }}</div>
+                <div class="stat-label">Last Test</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages">
+        <div class="alert alert-success" *ngIf="successMessage">
+            ✅ {{ successMessage }}
+        </div>
+        <div class="alert alert-error" *ngIf="errorMessage">
+            ⚠️ {{ errorMessage }}
+        </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="start_date">From Date</label>
+                <input id="start_date" type="date" [(ngModel)]="filters.start_date" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label for="end_date">To Date</label>
+                <input id="end_date" type="date" [(ngModel)]="filters.end_date" class="filter-input" />
+            </div>
+
+            <div class="filter-group">
+                <label for="result">Status</label>
+                <select id="result" [(ngModel)]="filters.result" class="filter-input">
+                    <option value="">All Results</option>
+                    <option value="OK">Passed (OK)</option>
+                    <option value="ERROR">Failed (ERROR)</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="search_id">Search by Test ID</label>
+                <input id="search_id" type="number" [(ngModel)]="filters.search_id" placeholder="Enter Test ID..."
+                    class="filter-input" (keyup.enter)="applyFilters()" />
+            </div>
+        </div>
+
+        <div class="filter-actions">
+            <button class="btn btn-primary" (click)="applyFilters()">
+                🔍 Apply Filters
+            </button>
+            <button class="btn btn-secondary" (click)="clearFilters()">
+                Clear All
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" *ngIf="isLoading">
+        <div class="spinner"></div>
+        <p>Loading test data...</p>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-section" *ngIf="!isLoading">
+        <div class="table-wrapper">
+            <table class="dashboard-table" *ngIf="tests.length > 0; else noData">
+                <thead>
+                    <tr>
+                        <th>Test ID</th>
+                        <th>Tension (V)</th>
+                        <th>Intensity</th>
+                        <th>Resistance (Ω)</th>
+                        <th>Status</th>
+                        <th>Test Date & Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let test of tests" [class.row-ok]="test.result === 'OK'">
+                        <td class="cell-id">#{{ test.id }}</td>
+                        <td class="cell-numeric">{{ formatNumber(test.tension) }}</td>
+                        <td class="cell-numeric">
+                            {{ formatNumber(test.final_intensity) }}
+                        </td>
+                        <td class="cell-numeric">
+                            {{ formatNumber(test.final_resistance) }}
+                        </td>
+                        <td class="cell-status">
+                            <span [class]="'badge ' + getResultClass(test.result)">
+                                {{ test.result }}
+                            </span>
+                        </td>
+                        <td class="cell-date">{{ formatDate(test.created_at) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <ng-template #noData>
+                <div class="no-data-message">
+                    <p>📭 No test records found</p>
+                    <p class="subtitle">Try adjusting your filters or add new test data</p>
+                </div>
+            </ng-template>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-section" *ngIf="tests.length > 0 && !isLoading">
+        <div class="pagination-info">
+            Page <strong>{{ getCurrentPage() }}</strong> of
+            <strong>{{ pagination.pages }}</strong> |
+            Showing <strong>{{ tests.length }}</strong> of
+            <strong>{{ pagination.total }}</strong> records
+        </div>
+
+        <div class="pagination-controls">
+            <button class="btn btn-sm" (click)="previousPage()" [disabled]="!canPreviousPage()">
+                ← Previous
+            </button>
+
+            <div class="page-buttons">
+                <button *ngFor="let page of getPageNumbers()" class="btn btn-sm"
+                    [class.active]="page === getCurrentPage()" (click)="goToPage(page)">
+                    {{ page }}
+                </button>
+            </div>
+
+            <button class="btn btn-sm" (click)="nextPage()" [disabled]="!canNextPage()">
+                Next →
+            </button>
+        </div>
+
+        <div class="rows-per-page">
+            <label for="limit">Rows per page:</label>
+            <select id="limit" [(ngModel)]="pagination.limit" (change)="applyFilters()" class="filter-input-sm">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dashboard-footer">
+        <p>
+            Last updated:
+            {{ 'now' | date : 'medium' }} | Dashboard powered by Windshield Test System
+        </p>
+    </div>
+</div>
