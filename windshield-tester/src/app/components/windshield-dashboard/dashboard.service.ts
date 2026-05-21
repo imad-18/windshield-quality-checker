@@ -99,20 +99,27 @@ export class DashboardService {
      *   start_date: '2026-05-01'
      * })
      */
-    exportCSV(filters: any = {}): Observable<any> {
-        let params = new HttpParams();
+    // exportCSV(filters: any = {}): Observable<any> {
+    //     let params = new HttpParams();
 
-        if (filters.result) {
-            params = params.set('result', filters.result);
-        }
-        if (filters.start_date) {
-            params = params.set('start_date', filters.start_date);
-        }
-        if (filters.end_date) {
-            params = params.set('end_date', filters.end_date);
-        }
+    //     if (filters.result) {
+    //         params = params.set('result', filters.result);
+    //     }
+    //     if (filters.start_date) {
+    //         params = params.set('start_date', filters.start_date);
+    //     }
+    //     if (filters.end_date) {
+    //         params = params.set('end_date', filters.end_date);
+    //     }
 
-        return this.http.get<any>(`${this.getApiUrl()}/export`, { params });
+    //     return this.http.get<any>(`${this.getApiUrl()}/export`, { params });
+    // }
+
+    exportCSV(params: any): Observable<Blob> {
+        return this.http.get('http://localhost:8000/api/dashboard/export', {
+            params,
+            responseType: 'blob'  // <-- IMPORTANT: this tells Angular to expect a binary response )
+        }); // So he doesn't try to parse it as JSON, and instead gives you the raw Blob data
     }
 
     /**

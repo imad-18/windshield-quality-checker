@@ -4,7 +4,9 @@ Endpoints for viewing windshield test results without modification
 """
 
 from datetime import datetime
-from io import StringIO
+from io import StringIO, BytesIO
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
 import csv
 import logging
 
@@ -254,41 +256,81 @@ def export_tests(
         # Get all tests (no pagination for export)
         tests = query.order_by(WindshieldTest.created_at.desc()).all()
 
-        # Generate CSV
-        output = StringIO()
-        writer = csv.writer(output)
+        # # Generate CSV
+        # output = StringIO()
+        # writer = csv.writer(output)
+
+        # # Write header
+        # writer.writerow(
+        #     [
+        #         "id",
+        #         "tension",
+        #         "final_intensity",
+        #         "final_resistance",
+        #         "result",
+        #         "created_at",
+        #     ]
+        # )
+
+        # # Write data rows
+        # for test in tests:
+        #     writer.writerow(
+        #         [
+        #             test.id,
+        #             test.tension,
+        #             test.final_intensity,
+        #             test.final_resistance,
+        #             test.result,
+        #             test.created_at.isoformat() if test.created_at else "",
+        #         ]
+        #     )
+
+        # # Return as downloadable file
+        # csv_content = output.getvalue()
+        # return {
+        #     "content": csv_content,
+        #     "filename": f"windshield_tests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        # }
+
+    # Create an Excel workbook
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = "Windshield Tests"
 
         # Write header
-        writer.writerow(
-            [
-                "id",
-                "tension",
-                "final_intensity",
-                "final_resistance",
-                "result",
-                "created_at",
-            ]
-        )
+        headers = [
+            "ID",
+            "Tension",
+            "Final Intensity",
+            "Final Resistance",
+            "Result",
+            "Created At",
+        ]
+        sheet.append(headers)
 
         # Write data rows
         for test in tests:
-            writer.writerow(
-                [
-                    test.id,
-                    test.tension,
-                    test.final_intensity,
-                    test.final_resistance,
-                    test.result,
-                    test.created_at.isoformat() if test.created_at else "",
-                ]
-            )
+            sheet.append([
+                test.id,
+                test.tension,
+                test.final_intensity,
+                test.final_resistance,
+                test.result,
+                test.created_at.isoformat() if test.created_at else "",
+            ])
+
+        # Save workbook to a BytesIO stream
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
 
         # Return as downloadable file
-        csv_content = output.getvalue()
-        return {
-            "content": csv_content,
-            "filename": f"windshield_tests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        }
+        filename = f"windshield_tests_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
 
     except Exception as e:
         logger.error(f"Error exporting tests: {str(e)}")

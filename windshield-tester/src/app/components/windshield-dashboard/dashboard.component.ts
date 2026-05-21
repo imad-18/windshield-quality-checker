@@ -217,29 +217,22 @@ export class WindshieldDashboardComponent implements OnInit {
         }
 
         this.dashboardService.exportCSV(params).subscribe({
-            next: (response: any) => {
-                // Create blob and download
-                const blob = new Blob([response.content], {
-                    type: 'text/csv;charset=utf-8;',
-                });
+            next: (blob: Blob) => {
+                const filename = `windshield_tests_${new Date().getTime()}.xlsx`;
+
                 const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
+                const url = window.URL.createObjectURL(blob);
 
-                link.setAttribute('href', url);
-                link.setAttribute('download', response.filename);
-                link.style.visibility = 'hidden';
-
-                document.body.appendChild(link);
+                link.href = url;
+                link.download = filename;
                 link.click();
-                document.body.removeChild(link);
 
-                this.successMessage = `Downloaded ${response.filename}`;
+                window.URL.revokeObjectURL(url);
+
+                this.successMessage = `Downloaded ${filename}`;
                 this.isExporting = false;
 
-                // Clear success message after 3 seconds
-                setTimeout(() => {
-                    this.successMessage = '';
-                }, 3000);
+                setTimeout(() => (this.successMessage = ''), 3000);
             },
             error: (error) => {
                 console.error('Error exporting CSV:', error);
