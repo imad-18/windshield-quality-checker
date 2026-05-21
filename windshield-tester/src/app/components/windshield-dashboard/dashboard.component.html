@@ -7,10 +7,10 @@
         </div> -->
         <div class="header-actions">
             <button class="btn btn-primary" (click)="refreshData()" [disabled]="isLoading">
-                🔄 Refresh
+                Refresh
             </button>
             <button class="btn btn-success" (click)="exportAsCSV()" [disabled]="isExporting || tests.length === 0">
-                {{ isExporting ? '⏳ Exporting...' : '⬇️ Export CSV' }}
+                {{ isExporting ? '⏳ Exporting...' : '⬇ Export CSV' }}
             </button>
         </div>
     </div>
@@ -88,7 +88,7 @@
 
         <div class="filter-actions">
             <button class="btn btn-primary" (click)="applyFilters()">
-                🔍 Apply Filters
+                Apply Filters
             </button>
             <button class="btn btn-secondary" (click)="clearFilters()">
                 Clear All
