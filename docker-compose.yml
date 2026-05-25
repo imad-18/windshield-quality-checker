@@ -9,6 +9,7 @@ services:
       MYSQL_DATABASE: windshield_db
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./backend/init-db:/docker-entrypoint-initdb.d
     ports:
       - "3306:3306"
     networks:
